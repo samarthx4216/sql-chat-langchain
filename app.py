@@ -9,7 +9,21 @@ from langchain_groq import ChatGroq
 
 from sqlalchemy import create_engine
 
-
+# Auto-create student.db if not exists
+db_path = Path(__file__).parent / "student.db"
+if not db_path.exists():
+    con = sqlite3.connect(db_path)
+    con.execute("""CREATE TABLE IF NOT EXISTS STUDENT (
+        NAME TEXT, CLASS TEXT, SECTION TEXT, MARKS INTEGER)""")
+    con.executemany("INSERT INTO STUDENT VALUES (?,?,?,?)", [
+        ('Krish','Data Science','A',90),
+        ('Sudhanshu','Data Science','B',100),
+        ('Darius','Data Science','A',86),
+        ('Vikash','DEVOPS','A',50),
+        ('Dipesh','DEVOPS','A',35),
+    ])
+    con.commit()
+    con.close()
 
 st.set_page_config(page_title="Langchain : Chat with SQL DB", page_icon="🦜")
 st.title("🦜 Langchain : Chat with SQL DB")
@@ -55,7 +69,7 @@ llm=ChatGroq(groq_api_key=api_key,model_name=model_name, streaming=True)
 def configure_db(db_uri, mysql_host=None, mysql_user=None, mysql_password=None, mysql_database=None):
     if db_uri==LOCALDB:
         dbfilepath=(Path(__file__).parent / "student.db").absolute()
-        creator=lambda: sqlite3.connect(f"file:{dbfilepath}?mode=ro", uri=True)
+        creator=lambda: sqlite3.connect(f"{dbfilepath}")
         return SQLDatabase(create_engine("sqlite:///", creator=creator))
     elif db_uri==MYSQL:
         if not(mysql_host and mysql_user and mysql_password and mysql_database):
@@ -98,6 +112,3 @@ if user_query:
         response=agent.run(user_query,callbacks=[st_cb])
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.write(response)
-
-
-    
